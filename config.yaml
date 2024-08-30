@@ -3,6 +3,16 @@ prompt: |
   Questions should be multiple choice questions about the education sytem in Turkey. Avoid statistics related information. Do not repeat the same question.
   The questions and answers should be in Turkish. try to generate as many pairs as you can.
   The output should be a list of dictionaries in json format. Each dictionary must contains: question, choices, and answer.
-  choices should always be numerated with letters like A: B: C: D: and the answer should be the letter of the choice like A.
+  Follow this format:
+  {
+    "question": "question text",
+    "choices": ["A: choice1", "B: choice2", "C: choice3", "D: choice4"],
+    "answer": "A"
+  },
+  {
+    "question": "question text",
+    "choices": ["A: choice1", "B: choice2", "C: choice3", "D: choice4"],
+    "answer": "B"
+  },
   Use single quotes for any cases inside the strings. Keep the usage of double quotes for the dicitonary keys only.
   Do not generate square brackets for the list of qa pairs, seperate each dictionary with a comma.
