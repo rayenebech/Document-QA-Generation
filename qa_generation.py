@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 from dotenv import load_dotenv
 from tqdm import tqdm
 import pathlib
+import time
 import json
 import yaml
 import os
@@ -114,7 +115,11 @@ def main():
     
     ##### Generate the question-answer pairs #####
     model = GenAIModel(**vars(args))
+    n_requests = 0
     for text in tqdm(texts):
+        if n_requests % 15 == 0:
+            print("Sleeping for 1 minutes to avoid rate limit")
+            time.sleep(60)
         try:
             response = model.generate(prompt, text)
             with open(args.output_file, "a") as f:
@@ -123,6 +128,7 @@ def main():
         except Exception as e:
             print(e)
             continue
+        n_requests += 1
     print("Done")
 
 
