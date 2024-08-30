@@ -5,13 +5,13 @@ import google.generativeai as genai
 from argparse import ArgumentParser
 from dotenv import load_dotenv
 from tqdm import tqdm
-import yaml
 import pathlib
+import json
+import yaml
 import os
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-
 
 def load_config(config_path: str) -> dict:
     """
@@ -44,6 +44,18 @@ def save_file(file_path: str, data: list):
         print(e)
         return 
     
+def save_json(file_path: str, data: dict):
+    """
+    Save the data to the file
+    """
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        f.close()
+    except Exception as e:
+        print(e)
+        return
+    
 def split_by_tokens(text: str, chunk_size: int = 4096, chunk_overlap: int = 200) -> list[str]:
     """
     This uses tiktoken library to split the text into tokens
@@ -65,7 +77,7 @@ class GenAIModel:
             "max_output_tokens": self.max_output_tokens
         }
         self.model = genai.GenerativeModel(
-                            model_name="gemini-1.5-flash",
+                            model_name= self.model_name,
                             generation_config=self.generate_config)
 
     def generate(self, prompt, text):
@@ -78,31 +90,34 @@ def main():
     parser = ArgumentParser(
                 prog='Question-Answer Generation from Documents',
                 description='This script generates question-answer pairs from a document.')
-    parser.add_argument('--i','--input_file', type=str, required=True, help='Path to the file')
-    parser.add_argument('-o','--output_file', type=str, required=True, help='Path to the output file')
+    parser.add_argument('--input_file', type=str, required=True, help='Path to the file')
+    parser.add_argument('--output_file', type=str, required=True, help='Path to the output file')
     parser.add_argument('--chunk_size', type=int, default=4096, help='Chunk size for text splitting in tokens')
     parser.add_argument('--chunk_overlap', type=int, default=200, help='Token Chunk overlap for text splitting')
-    parser.add_argument('--model', type=str, default="gemini-1.5-flash", help='Model name to use for generation')
+    parser.add_argument('--model_name', type=str, default="gemini-1.5-flash", help='Model name to use for generation')
     parser.add_argument('--temperature', type=float, default=0.3, help='Temperature for generation')
     parser.add_argument('--max_output_tokens', type=int, default=4096, help='Maximum output tokens for generation')
     parser.add_argument('--response_mime_type', type=str, default="application/json", help='Response mime type for generation')
-    parser.add_argument('--join_text', action='store_true', help='Join the text of the document')
+    parser.add_argument('--join_text', type=bool, default=True, help='Join the text from the document')
 
     args = parser.parse_args()
     config = load_config("config.yaml")
     prompt = config.get("prompt")    
 
+
     ##### Read the file and split the text into tokens #####
-    document = read_file(file_path = args.file, join_text=args.join_text)
+    document = read_file(file_path = args.input_file, join_text=args.join_text)
     texts = split_by_tokens(text = document, chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap)
-    save_file(file_path=args.output, data=texts)
+    file_name = pathlib.Path(args.input_file.split(".")[0] + "_chunks.json")
+    print(f"Saving the raw text to {file_name}")
+    save_json(file_path=file_name, data=texts)
     
     ##### Generate the question-answer pairs #####
-    model = GenAIModel()
+    model = GenAIModel(**vars(args))
     for text in tqdm(texts):
         try:
             response = model.generate(prompt, text)
-            with open("data/output.json", "a") as f:
+            with open(args.output_file, "a") as f:
                 f.write(response)
                 f.write("\n")
         except Exception as e:
